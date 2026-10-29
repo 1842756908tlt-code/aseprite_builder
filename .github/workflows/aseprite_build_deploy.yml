@@ -44,8 +44,8 @@ jobs:
         shell: pwsh
         run: |
           'print("ASEPRITE_LUA_OK", app.version)' | Set-Content lua-check.lua -Encoding utf8
-          & ./build/bin/aseprite.exe -b --script lua-check.lua
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $luaProcess = Start-Process -FilePath "$env:GITHUB_WORKSPACE/build/bin/aseprite.exe" -ArgumentList @('-b', '--script', "$env:GITHUB_WORKSPACE/lua-check.lua") -Wait -PassThru -WindowStyle Hidden
+          if ($luaProcess.ExitCode -ne 0) { throw "Lua check failed: $($luaProcess.ExitCode)" }
           '# Portable self-compiled Aseprite' | Set-Content build/bin/aseprite.ini -Encoding ascii
           Compress-Archive -Path build/bin/* -DestinationPath Aseprite-Windows-x64.zip
           if (-not (Test-Path -LiteralPath Aseprite-Windows-x64.zip)) { throw 'Portable ZIP was not created' }
@@ -69,4 +69,5 @@ jobs:
           $tag = "personal-${env:SOURCE_TAG}-${env:GITHUB_RUN_ID}"
           gh release create $tag Aseprite-Windows-x64.zip SHA256.txt --draft --target "${{ github.sha }}" --title "Personal Aseprite $env:SOURCE_TAG Windows x64" --notes "Self-compiled from official Aseprite source, with Lua enabled. Personal draft; do not publish. Workflow adapted from ellisonoswalt/aseprite_builder."
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
 
