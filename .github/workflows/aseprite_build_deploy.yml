@@ -48,7 +48,17 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           '# Portable self-compiled Aseprite' | Set-Content build/bin/aseprite.ini -Encoding ascii
           Compress-Archive -Path build/bin/* -DestinationPath Aseprite-Windows-x64.zip
-          Get-FileHash Aseprite-Windows-x64.zip -Algorithm SHA256 | Format-List | Out-File SHA256.txt
+          if (-not (Test-Path -LiteralPath Aseprite-Windows-x64.zip)) { throw 'Portable ZIP was not created' }
+          (Get-FileHash Aseprite-Windows-x64.zip -Algorithm SHA256).Hash | Set-Content SHA256.txt -Encoding ascii
+      - name: Preserve verified portable package
+        uses: actions/upload-artifact@v4
+        with:
+          name: Aseprite-Windows-x64
+          path: |
+            Aseprite-Windows-x64.zip
+            SHA256.txt
+          if-no-files-found: error
+          retention-days: 7
       - name: Store personal draft release
         shell: pwsh
         env:
@@ -56,6 +66,7 @@ jobs:
           GH_REPO: ${{ github.repository }}
           SOURCE_TAG: ${{ steps.version.outputs.tag }}
         run: |
-          $tag = "personal-$env:SOURCE_TAG-$env:GITHUB_RUN_ID"
+          $tag = "personal-${env:SOURCE_TAG}-${env:GITHUB_RUN_ID}"
           gh release create $tag Aseprite-Windows-x64.zip SHA256.txt --draft --target "${{ github.sha }}" --title "Personal Aseprite $env:SOURCE_TAG Windows x64" --notes "Self-compiled from official Aseprite source, with Lua enabled. Personal draft; do not publish. Workflow adapted from ellisonoswalt/aseprite_builder."
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
